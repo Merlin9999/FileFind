@@ -154,6 +154,10 @@ publish/
 *.nuget.props
 *.nuget.targets
 
+# Added by Marc Behnke - 2016.02.26
+# NuGet Packages for Cake Build
+build/tools/*
+
 # Microsoft Azure Build Output
 csx/
 *.build.csdef
