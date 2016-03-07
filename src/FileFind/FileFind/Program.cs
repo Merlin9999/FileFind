@@ -14,7 +14,7 @@ namespace FileFind
 {
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             ParserResult<object> optionsResult = Parser.Default.ParseArguments<ListFilesOptions, ListFoldersOptions>(args);
             var parsedOptions = optionsResult as Parsed<object>;
@@ -22,9 +22,11 @@ namespace FileFind
                 ? (CommonOptions)parsedOptions.Value
                 : new ListFilesOptions();
 
+            int exitCode;
+
             try
             {
-                int exitCode = optionsResult
+                exitCode = optionsResult
                     .MapResult(
                         (ListFilesOptions options) =>
                         {
@@ -49,47 +51,40 @@ namespace FileFind
                             //    ConditionallyWaitBeforeClosing(optionsTemp);
                             return 1;
                         });
-
-                //if (args.HelpSyntax)
-                //{
-                //    var msg = new StringBuilder();
-                //    msg.Append(optMgr.OptionSets.First().BuildHelpText(false)).AppendLine()
-                //        .AppendLine("Examples:")
-                //        .AppendFormat("   {0} **\\*.exe", Process.GetCurrentProcess().ProcessName).AppendLine()
-                //        .AppendFormat("   {0} /p+ *.exe", Process.GetCurrentProcess().ProcessName).AppendLine()
-                //        .AppendFormat("   {0} /e:**\\a*.exe /e:**\\a*.txt **\\*.exe **\\*.txt", Process.GetCurrentProcess().ProcessName).AppendLine();
-                //    Console.Write(msg.ToString());
-                //    ConditionallyWaitBeforeClosing(args);
-                //    return;
-                //}
-
             }
             catch (SecurityException se)
             {
                 HandleException(se, false, optionsTemp.ShowDiagnosticsOnError);
+                exitCode = 1;
             }
             catch (UnauthorizedAccessException uae)
             {
                 HandleException(uae, false, optionsTemp.ShowDiagnosticsOnError);
+                exitCode = 1;
             }
             catch (FileFindException ffe)
             {
                 HandleException(ffe, false, optionsTemp.ShowDiagnosticsOnError);
+                exitCode = 1;
             }
             catch (DirectoryNotFoundException dnfe)
             {
                 HandleException(dnfe, false, optionsTemp.ShowDiagnosticsOnError);
+                exitCode = 1;
             }
             catch (IOException ioe)
             {
                 HandleException(ioe, false, optionsTemp.ShowDiagnosticsOnError);
+                exitCode = 1;
             }
             catch (Exception exc)
             {
                 HandleException(exc, true, optionsTemp.ShowDiagnosticsOnError);
+                exitCode = 1;
             }
 
             ConditionallyWaitBeforeClosing(optionsTemp);
+            return exitCode;
         }
 
         private static void ListFiles(ListFilesOptions options)
@@ -170,10 +165,6 @@ namespace FileFind
         {
             if (!options.IncludePathExpressions.Any())
                 throw new FileFindException("At least one include path is required.");
-
-            if (options.ZipFileName != null && options.FindFolders)
-                throw new FileFindException(
-                    "The arguments \"/ZipFileName=<ZipFile>\" and \"/Directory+\" are incompatible.");
 
             if (options.UseEnvironmentPath)
             {
