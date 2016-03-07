@@ -16,10 +16,10 @@ namespace FileFind
     public class CommonOptions : OldOptions
     {
         [Value(0, HelpText = "Inclusion path expressions (space delimited).")]
-        public IEnumerable<string> IncludePathExpressionList { get; set; }
+        public IEnumerable<string> IncludePathExpressions { get; set; }
 
         [Option('e', "ExcludePaths", HelpText = "Specifies exclusion path expressions ex:-e;**/*.txt;**/*.doc", Separator = ';')]
-        public IEnumerable<string> ExcludePathExpressionList { get; set; }
+        public IEnumerable<string> ExcludePathExpressions { get; set; }
     }
 
     public class OldOptions
@@ -78,10 +78,10 @@ namespace FileFind
     //                    new NameValueOption<Options>("BasePath", args, "Specifies a base path.", (paramObj, value) => paramObj.BaseFolder = value),
     //                    new NameValueOption<Options>("ZipFileName", args, "Zip the resulting files to the given file name.", (paramObj, value) => paramObj.ZipFileName = value),
     //                    new NameValueOption<Options>("CopyToFolder", args, "Copy the resulting files to the specified folder.", (paramObj, value) => paramObj.CopyToFolder = value),
-    //                    new NameValueOption<Options>("Exclude", args, "Specifies an exclusion path expression.", (paramObj, value) => paramObj.ExcludePathExpressionList.Add(value)),
+    //                    new NameValueOption<Options>("Exclude", args, "Specifies an exclusion path expression.", (paramObj, value) => paramObj.ExcludePathExpressions.Add(value)),
     //                    new SwitchOption<Options>("Help", args, null, (paramObj, value) => paramObj.HelpSyntax = value),
     //                    new CommandOption<Options>("Help", args, "Help Information.", paramObj => paramObj.HelpSyntax = true),
-    //                    new SequencedOption<Options>("Include", false, true, args, "Specifies an inclusion path expression.", (paramObj, value) => paramObj.IncludePathExpressionList.Add(value))
+    //                    new SequencedOption<Options>("Include", false, true, args, "Specifies an inclusion path expression.", (paramObj, value) => paramObj.IncludePathExpressions.Add(value))
     //                    )
     //            );
 

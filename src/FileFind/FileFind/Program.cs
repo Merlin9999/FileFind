@@ -35,7 +35,7 @@ namespace FileFind
                         },
                         (ListFoldersOptions options) =>
                         {
-                            ListFiles(options);
+                            ListFolders(options);
                             return 0;
                             //if (options.Verbose) Console.WriteLine("Filenames: {0}", string.Join(",", options.InputFiles.ToArray()));
                             //return 0;
@@ -92,47 +92,15 @@ namespace FileFind
             ConditionallyWaitBeforeClosing(optionsTemp);
         }
 
-        private static void ListFiles(CommonOptions options)
+        private static void ListFiles(ListFilesOptions options)
         {
-            if (!options.IncludePathExpressionList.Any())
-                throw new FileFindException("At least one include path is required.");
+            ValidateOptionsForConsistency(options);
 
-            if (options.ZipFileName != null && options.FindFolders)
-                throw new FileFindException(
-                    "The arguments \"/ZipFileName=<ZipFile>\" and \"/Directory+\" are incompatible.");
-            
-            var fileSet = new FileSet(new DesktopFileSystem(), options.BaseFolder ?? @".\");
-
-            //EDirectoryEntrySetOptions desOptions =
-            //    (options.FindFiles ? EDirectoryEntrySetOptions.FindFiles : EDirectoryEntrySetOptions.None) |
-            //    (options.FindFolders ? EDirectoryEntrySetOptions.FindFolders : EDirectoryEntrySetOptions.None);
-            //var fes = new FolderEntrySet(optionsResult.BaseFolder, desOptions);
-
-            foreach (string includePathExpression in options.IncludePathExpressionList)
-                fileSet.Include(includePathExpression);
-
-            foreach (string excludePathExpression in options.ExcludePathExpressionList)
-                fileSet.Exclude(excludePathExpression);
+            FileSet fileSet = CreateFileSet(options.BaseFolder, 
+                options.IncludePathExpressions, options.ExcludePathExpressions);
 
             if (options.UseEnvironmentPath)
-            {
-                if (!string.IsNullOrWhiteSpace(options.BaseFolder))
-                    throw new FileFindException("The arguments \"/BasePath+\" and \"/Path+\" are incompatible.");
-
-                if (options.ZipFileName != null)
-                    throw new FileFindException(
-                        "The arguments \"/ZipFileName=<ZipFile>\" and \"/Path+\" are incompatible.");
-
-                var pathList = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
-                foreach (string envPath in pathList)
-                {
-                    foreach (string includePathExpression in options.IncludePathExpressionList)
-                    {
-                        if (!Path.IsPathRooted(includePathExpression))
-                            fileSet.Include(Path.Combine(envPath, includePathExpression));
-                    }
-                }
-            }
+                IncludeEnvironmentPaths(options.IncludePathExpressions, fileSet);
 
             //bool createdZip = false;
             //bool copiedFiles = false;
@@ -170,62 +138,108 @@ namespace FileFind
             //        Console.WriteLine();
             //    }
 
-            Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFilesAsync();
-            matchingFilesTask.Wait();
-            IEnumerable<string> matchingFiles = matchingFilesTask.Result;
-
+            IEnumerable<string> matchingFolderItems = GetMatchingFileNames(fileSet);
 
             if (options.ReturnRootedPaths)
+                matchingFolderItems = AlterFilePathsToFullyQualified(options.BaseFolder, matchingFolderItems);
+
+            foreach (string fileName in matchingFolderItems)
+                Console.WriteLine(fileName);
+        }
+
+        private static void ListFolders(ListFoldersOptions options)
+        {
+            ValidateOptionsForConsistency(options);
+
+            FileSet fileSet = CreateFileSet(options.BaseFolder,
+                options.IncludePathExpressions, options.ExcludePathExpressions);
+
+            if (options.UseEnvironmentPath)
+                IncludeEnvironmentPaths(options.IncludePathExpressions, fileSet);
+
+            IEnumerable<string> matchingFolderItems = GetMatchingFolderNames(fileSet);
+
+            if (options.ReturnRootedPaths)
+                matchingFolderItems = AlterFilePathsToFullyQualified(options.BaseFolder, matchingFolderItems);
+
+            foreach (string fileName in matchingFolderItems)
+                Console.WriteLine(fileName);
+        }
+
+        private static void ValidateOptionsForConsistency(CommonOptions options)
+        {
+            if (!options.IncludePathExpressions.Any())
+                throw new FileFindException("At least one include path is required.");
+
+            if (options.ZipFileName != null && options.FindFolders)
+                throw new FileFindException(
+                    "The arguments \"/ZipFileName=<ZipFile>\" and \"/Directory+\" are incompatible.");
+
+            if (options.UseEnvironmentPath)
             {
-                matchingFiles =
-                    matchingFiles.Select(
-                        path =>
-                            Path.GetFullPath(string.IsNullOrWhiteSpace(options.BaseFolder)
-                                ? path
-                                : Path.Combine(options.BaseFolder, path)));
+                if (!string.IsNullOrWhiteSpace(options.BaseFolder))
+                    throw new FileFindException("The arguments \"/BasePath+\" and \"/Path+\" are incompatible.");
+
+                if (options.ZipFileName != null)
+                    throw new FileFindException(
+                        "The arguments \"/ZipFileName=<ZipFile>\" and \"/Path+\" are incompatible.");
+
+                // is the copy file copy parameter compatible with UseEnvironmentPath?
             }
+        }
 
-            if (options.FindFiles && options.FindFolders)
+        private static FileSet CreateFileSet(string baseFolder, 
+            IEnumerable<string> includedPathExpressions, IEnumerable<string> excludedPathExpressions)
+        {
+            var fileSet = new FileSet(new DesktopFileSystem(), baseFolder ?? @".\");
+
+            foreach (string includePathExpression in includedPathExpressions)
+                fileSet.Include(includePathExpression);
+
+            foreach (string excludePathExpression in excludedPathExpressions)
+                fileSet.Exclude(excludePathExpression);
+
+            return fileSet;
+        }
+
+        private static IEnumerable<string> AlterFilePathsToFullyQualified(string baseFolder, 
+            IEnumerable<string> matchingFolderItems)
+        {
+            matchingFolderItems =
+                matchingFolderItems.Select(
+                    path =>
+                        Path.GetFullPath(string.IsNullOrWhiteSpace(baseFolder)
+                            ? path
+                            : Path.Combine(baseFolder, path)));
+            return matchingFolderItems;
+        }
+
+        private static void IncludeEnvironmentPaths(
+            IEnumerable<string> alreadyIncludedPathExpressions, FileSet fileSet)
+        {
+            var pathList = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
+            foreach (string envPath in pathList)
             {
-                Console.WriteLine();
-
-                if (!matchingFiles.Any())
+                foreach (string includePathExpression in alreadyIncludedPathExpressions)
                 {
-                    Console.WriteLine("No matching files.");
+                    if (!Path.IsPathRooted(includePathExpression))
+                        fileSet.Include(Path.Combine(envPath, includePathExpression));
                 }
-                else
-                {
-                    Console.WriteLine("Matching Files:");
-                    Console.WriteLine();
-                    foreach (string fileName in matchingFiles)
-                        Console.WriteLine(fileName);
-                }
+            }
+        }
 
-                Console.WriteLine();
+        private static IEnumerable<string> GetMatchingFileNames(FileSet fileSet)
+        {
+            Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFilesAsync();
+            matchingFilesTask.Wait();
+            return matchingFilesTask.Result;
+        }
 
-                //if (matchingFolders.Count == 0)
-                //{
-                //    Console.WriteLine("No matching folders.");
-                //}
-                //else
-                //{
-                //    Console.WriteLine("Matching Folders:");
-                //    Console.WriteLine();
-                //    foreach (string folderName in matchingFolders)
-                //        Console.WriteLine(folderName);
-                //}
-            }
-            // FolderEntrySet defaults to find files when neither find files or find folders are selected.
-            else if (options.FindFiles || (!options.FindFiles && !options.FindFolders))
-            {
-                foreach (string fileName in matchingFiles)
-                    Console.WriteLine(fileName);
-            }
-            else //if (args.FindFolders)
-            {
-                //foreach (string folderName in matchingFolders)
-                //    Console.WriteLine(folderName);
-            }
+        private static IEnumerable<string> GetMatchingFolderNames(FileSet fileSet)
+        {
+            Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFoldersAsync();
+            matchingFilesTask.Wait();
+            return matchingFilesTask.Result;
         }
 
         private static void HandleException(Exception exc, bool unrecognizedError, bool showDiagnostic)
