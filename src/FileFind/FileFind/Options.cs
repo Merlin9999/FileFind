@@ -24,9 +24,15 @@ namespace FileFind
         [Option('e', "excludepaths", HelpText = @"Exclusion path expressions  ex: -e **\a1.dat **\a*\*.cs")]
         public IEnumerable<string> ExcludePathExpressions { get; set; }
 
-        [Option('p', "envpath", HelpText = "Include paths in the system environment PATH")]
-        public bool UseEnvironmentPath { get; set; }
 
+        // This does not work since the new glob algorithm does NOT iterate through the file system 
+        // for each include path provided. That is what the old system did. How might this be altered to work?
+        // Perhaps a separate verb ??? Could call it searchpath or pathsearch.
+        //
+        //[Option('p', "envpath", HelpText = "Include paths in the system environment PATH")]
+        //public bool UseEnvironmentPath { get; set; }
+
+ 
         [Option('r', "rootedpaths", HelpText = "Return rooted (fully qualified) paths")]
         public bool ReturnRootedPaths { get; set; }
 
@@ -69,7 +75,6 @@ namespace FileFind
     //                    new SwitchOption<Options>("Access", args, "Show Access Denied and other permission errors.", (paramObj, value) => paramObj.ShowPermissionErrors = value),
     //                    new NameValueOption<Options>("ZipFileName", args, "Zip the resulting files to the given file name.", (paramObj, value) => paramObj.ZipFileName = value),
     //                    new NameValueOption<Options>("CopyToFolder", args, "Copy the resulting files to the specified folder.", (paramObj, value) => paramObj.CopyToFolder = value),
-    //                    new NameValueOption<Options>("Exclude", args, "Specifies an exclusion path expression.", (paramObj, value) => paramObj.ExcludePathExpressions.Add(value)),
     //                    )
     //            );
 
