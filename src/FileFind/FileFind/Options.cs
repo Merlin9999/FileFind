@@ -41,20 +41,21 @@ namespace FileFind
 
         [Option('w', "wait", HelpText = "Wait for a key-press before closing")]
         public bool WaitBeforeClosing { get; set; }
+
+        [Option('a', "accesserrors", HelpText = "Show Access Denied and other permission errors")]
+        public bool ShowPermissionErrors { get; set; }
     }
 
     public class OldOptions
     {
         public OldOptions()
         {
-            this.ShowPermissionErrors = false;
             this.ZipFileName = null;
             this.CopyToFolder = null;
         }
 
         public string ZipFileName { get; set; }
         public string CopyToFolder { get; set; }
-        public bool ShowPermissionErrors { get; set; }
     }
 
 
@@ -72,7 +73,6 @@ namespace FileFind
     //                    // Note: Options are added in Switch and Command option pairs to support both syntaxes. 
     //                    //       Only one of the two parameter formats are on the help page. Doesn't apply to NameValue 
     //                    //       and Sequenced option types.
-    //                    new SwitchOption<Options>("Access", args, "Show Access Denied and other permission errors.", (paramObj, value) => paramObj.ShowPermissionErrors = value),
     //                    new NameValueOption<Options>("ZipFileName", args, "Zip the resulting files to the given file name.", (paramObj, value) => paramObj.ZipFileName = value),
     //                    new NameValueOption<Options>("CopyToFolder", args, "Copy the resulting files to the specified folder.", (paramObj, value) => paramObj.CopyToFolder = value),
     //                    )

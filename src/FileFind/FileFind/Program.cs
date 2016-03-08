@@ -92,7 +92,8 @@ namespace FileFind
             ValidateOptionsForConsistency(options);
 
             FileSet fileSet = CreateFileSet(options.BaseFolder, 
-                options.IncludePathExpressions, options.ExcludePathExpressions);
+                options.IncludePathExpressions, options.ExcludePathExpressions,
+                !options.ShowPermissionErrors);
 
             //if (options.UseEnvironmentPath)
             //    IncludeEnvironmentPaths(options.IncludePathExpressions, fileSet);
@@ -147,7 +148,8 @@ namespace FileFind
             ValidateOptionsForConsistency(options);
 
             FileSet fileSet = CreateFileSet(options.BaseFolder,
-                options.IncludePathExpressions, options.ExcludePathExpressions);
+                options.IncludePathExpressions, options.ExcludePathExpressions,
+                !options.ShowPermissionErrors);
 
             //if (options.UseEnvironmentPath)
             //    IncludeEnvironmentPaths(options.IncludePathExpressions, fileSet);
@@ -180,7 +182,8 @@ namespace FileFind
         }
 
         private static FileSet CreateFileSet(string baseFolder, 
-            IEnumerable<string> includedPathExpressions, IEnumerable<string> excludedPathExpressions)
+            IEnumerable<string> includedPathExpressions, IEnumerable<string> excludedPathExpressions,
+            bool filterFileSystemAccessExceptions)
         {
             var fileSet = new FileSet(new DesktopFileSystem(), baseFolder ?? @".\");
 
@@ -190,7 +193,20 @@ namespace FileFind
             foreach (string excludePathExpression in excludedPathExpressions)
                 fileSet.Exclude(excludePathExpression);
 
+            if (filterFileSystemAccessExceptions)
+            {
+                fileSet.Catch<SecurityException>(ex => { });
+                fileSet.Catch<UnauthorizedAccessException>(ex => { });
+                fileSet.Catch<FileFindException>(ex => { });
+                fileSet.Catch<DirectoryNotFoundException>(ex => { });
+                fileSet.Catch<IOException>(ex => { });
+            }
+
             return fileSet;
+        }
+
+        private static void EmptyMethod()
+        {
         }
 
         private static IEnumerable<string> AlterFilePathsToFullyQualified(string baseFolder, 
@@ -230,6 +246,7 @@ namespace FileFind
         {
             Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFoldersAsync();
             WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
+
             return matchingFilesTask.Result;
         }
 
