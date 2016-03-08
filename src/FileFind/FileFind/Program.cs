@@ -222,15 +222,30 @@ namespace FileFind
         private static IEnumerable<string> GetMatchingFileNames(FileSet fileSet)
         {
             Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFilesAsync();
-            matchingFilesTask.Wait();
+            WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
             return matchingFilesTask.Result;
         }
 
         private static IEnumerable<string> GetMatchingFolderNames(FileSet fileSet)
         {
             Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFoldersAsync();
-            matchingFilesTask.Wait();
+            WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
             return matchingFilesTask.Result;
+        }
+
+        private static void WaitForTaskAndTranslateAggregateExceptions(Task taskToWaitFor)
+        {
+            try
+            {
+                taskToWaitFor.Wait();
+            }
+            catch (AggregateException agg)
+            {
+                if (agg.InnerExceptions.Count == 1)
+                    throw agg.InnerExceptions[0];
+
+                throw;
+            }
         }
 
         private static void HandleException(Exception exc, bool unrecognizedError, bool showDiagnostic)
