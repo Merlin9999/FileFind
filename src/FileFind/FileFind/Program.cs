@@ -16,9 +16,11 @@ namespace FileFind
     {
         static int Main(string[] args)
         {
-            ParserResult<object> optionsResult = Parser.Default.ParseArguments<ListFilesOptions, ListFoldersOptions>(args);
+            ParserResult<object> optionsResult = Parser.Default
+                .ParseArguments<ListFilesOptions, ListFoldersOptions, CopyFilesOptions, ZipFilesOptions, SearchPathOptions>(args);
+
             var parsedOptions = optionsResult as Parsed<object>;
-            CommonOptions optionsTemp = parsedOptions != null
+            CommonOptions commonOptions = parsedOptions != null
                 ? (CommonOptions)parsedOptions.Value
                 : new ListFilesOptions();
 
@@ -32,15 +34,26 @@ namespace FileFind
                         {
                             ListFiles(options);
                             return 0;
-                            //if (options.Verbose) Console.WriteLine("Filenames: {0}", string.Join(",", options.InputFiles.ToArray()));
-                            //return 0;
                         },
                         (ListFoldersOptions options) =>
                         {
                             ListFolders(options);
                             return 0;
-                            //if (options.Verbose) Console.WriteLine("Filenames: {0}", string.Join(",", options.InputFiles.ToArray()));
-                            //return 0;
+                        },
+                        (CopyFilesOptions options) =>
+                        {
+                            CopyFiles(options);
+                            return 0;
+                        },
+                        (ZipFilesOptions options) =>
+                        {
+                            ZipFiles(options);
+                            return 0;
+                        },
+                        (SearchPathOptions options) =>
+                        {
+                            SearchEnvironmentPath(options);
+                            return 0;
                         },
                         errors =>
                         {
@@ -54,36 +67,36 @@ namespace FileFind
             }
             catch (SecurityException se)
             {
-                HandleException(se, false, optionsTemp.ShowDiagnosticsOnError);
+                HandleException(se, false, commonOptions.ShowDiagnosticsOnError);
                 exitCode = 1;
             }
             catch (UnauthorizedAccessException uae)
             {
-                HandleException(uae, false, optionsTemp.ShowDiagnosticsOnError);
+                HandleException(uae, false, commonOptions.ShowDiagnosticsOnError);
                 exitCode = 1;
             }
             catch (FileFindException ffe)
             {
-                HandleException(ffe, false, optionsTemp.ShowDiagnosticsOnError);
+                HandleException(ffe, false, commonOptions.ShowDiagnosticsOnError);
                 exitCode = 1;
             }
             catch (DirectoryNotFoundException dnfe)
             {
-                HandleException(dnfe, false, optionsTemp.ShowDiagnosticsOnError);
+                HandleException(dnfe, false, commonOptions.ShowDiagnosticsOnError);
                 exitCode = 1;
             }
             catch (IOException ioe)
             {
-                HandleException(ioe, false, optionsTemp.ShowDiagnosticsOnError);
+                HandleException(ioe, false, commonOptions.ShowDiagnosticsOnError);
                 exitCode = 1;
             }
             catch (Exception exc)
             {
-                HandleException(exc, true, optionsTemp.ShowDiagnosticsOnError);
+                HandleException(exc, true, commonOptions.ShowDiagnosticsOnError);
                 exitCode = 1;
             }
 
-            ConditionallyWaitBeforeClosing(optionsTemp);
+            ConditionallyWaitBeforeClosing(commonOptions);
             return exitCode;
         }
 
@@ -93,46 +106,10 @@ namespace FileFind
 
             FileSet fileSet = CreateFileSet(options.BaseFolder, 
                 options.IncludePathExpressions, options.ExcludePathExpressions,
-                !options.ShowPermissionErrors);
+                !options.AbortOnAccessErrors);
 
             //if (options.UseEnvironmentPath)
             //    IncludeEnvironmentPaths(options.IncludePathExpressions, fileSet);
-
-            //bool createdZip = false;
-            //bool copiedFiles = false;
-
-            //if (options.ZipFileName != null)
-            //{
-            //    fes.ZipFiles(options.ZipFileName);
-            //    createdZip = true;
-            //}
-
-            //if (options.CopyToFolder != null)
-            //{
-            //    fes.CopyFiles(options.CopyToFolder);
-            //    copiedFiles = true;
-            //}
-
-            //if (!createdZip && !copiedFiles)
-            //{
-            //    List<string> matchingFiles = fes.MatchingFiles.ToList();
-            //    List<string> matchingFolders = fes.MatchingFolders.ToList();
-
-            //    if (options.ShowPermissionErrors)
-            //    {
-            //        Console.WriteLine("Permission Error Messages:");
-            //        Console.WriteLine();
-            //        var priorErrorMessages = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
-            //        foreach (Exception exc in fes.PermissionExceptionList)
-            //        {
-            //            if (priorErrorMessages.Contains(exc.Message))
-            //                continue;
-
-            //            Console.WriteLine(exc.Message);
-            //            priorErrorMessages.Add(exc.Message);
-            //        }
-            //        Console.WriteLine();
-            //    }
 
             IEnumerable<string> matchingFolderItems = GetMatchingFileNames(fileSet);
 
@@ -149,7 +126,7 @@ namespace FileFind
 
             FileSet fileSet = CreateFileSet(options.BaseFolder,
                 options.IncludePathExpressions, options.ExcludePathExpressions,
-                !options.ShowPermissionErrors);
+                !options.AbortOnAccessErrors);
 
             //if (options.UseEnvironmentPath)
             //    IncludeEnvironmentPaths(options.IncludePathExpressions, fileSet);
@@ -163,6 +140,76 @@ namespace FileFind
                 Console.WriteLine(fileName);
         }
 
+        private static void CopyFiles(CopyFilesOptions options)
+        {
+            ValidateOptionsForConsistency(options);
+
+            FileSet fileSet = CreateFileSet(options.BaseFolder,
+                options.IncludePathExpressions, options.ExcludePathExpressions,
+                !options.AbortOnAccessErrors);
+
+            fileSet.CopyFiles(options.OutFolder);
+        }
+
+        private static void ZipFiles(ZipFilesOptions options)
+        {
+            ValidateOptionsForConsistency(options);
+
+            FileSet fileSet = CreateFileSet(options.BaseFolder,
+                options.IncludePathExpressions, options.ExcludePathExpressions,
+                !options.AbortOnAccessErrors);
+
+            fileSet.ZipFiles(options.ZipBaseFolder, options.ZipFileName);
+        }
+
+        private static void SearchEnvironmentPath(SearchPathOptions options)
+        {
+            ValidateOptionsForConsistency(options);
+
+            var baseFolderAndFileSetList = new List<BaseFolderAndFileSet>();
+            var pathList = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
+            foreach (string envPath in pathList)
+            {
+                baseFolderAndFileSetList.Add(new BaseFolderAndFileSet()
+                {
+                    BaseFolder = envPath,
+                    FileSet =
+                        CreateFileSet(envPath, options.IncludePathExpressions, options.ExcludePathExpressions,
+                            !options.AbortOnAccessErrors),
+                });
+            }
+
+            foreach (BaseFolderAndFileSet baseFolderAndFileSet in baseFolderAndFileSetList)
+            {
+                IEnumerable<string> matchingFolderItems = GetMatchingFolderNames(baseFolderAndFileSet.FileSet);
+
+                matchingFolderItems = AlterFilePathsToFullyQualified(baseFolderAndFileSet.BaseFolder, matchingFolderItems);
+
+                foreach (string fileName in matchingFolderItems)
+                    Console.WriteLine(fileName);
+            }
+        }
+
+        private class BaseFolderAndFileSet
+        {
+            public string BaseFolder { get; set; }
+            public FileSet FileSet { get; set; }
+        }
+
+        private static void IncludeEnvironmentPaths(
+            IEnumerable<string> alreadyIncludedPathExpressions, FileSet fileSet)
+        {
+            var pathList = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
+            foreach (string envPath in pathList)
+            {
+                foreach (string includePathExpression in alreadyIncludedPathExpressions)
+                {
+                    if (!Path.IsPathRooted(includePathExpression))
+                        fileSet.Include(Path.Combine(envPath, includePathExpression));
+                }
+            }
+        }
+
         private static void ValidateOptionsForConsistency(CommonOptions options)
         {
             if (!options.IncludePathExpressions.Any())
@@ -171,7 +218,7 @@ namespace FileFind
             //if (options.UseEnvironmentPath)
             //{
             //    if (!string.IsNullOrWhiteSpace(options.BaseFolder))
-            //        throw new FileFindException("The arguments \"/BasePath+\" and \"/Path+\" are incompatible.");
+            //        throw new FileFindException("The arguments \"/OutputBasePath+\" and \"/Path+\" are incompatible.");
 
             //    if (options.ZipFileName != null)
             //        throw new FileFindException(
@@ -195,11 +242,11 @@ namespace FileFind
 
             if (filterFileSystemAccessExceptions)
             {
-                fileSet.Catch<SecurityException>(ex => { });
-                fileSet.Catch<UnauthorizedAccessException>(ex => { });
-                fileSet.Catch<FileFindException>(ex => { });
-                fileSet.Catch<DirectoryNotFoundException>(ex => { });
-                fileSet.Catch<IOException>(ex => { });
+                fileSet.Catch<SecurityException>(ex => { })
+                    .Catch<UnauthorizedAccessException>(ex => { })
+                    .Catch<FileFindException>(ex => { })
+                    .Catch<DirectoryNotFoundException>(ex => { })
+                    .Catch<IOException>(ex => { });
             }
 
             return fileSet;
@@ -221,48 +268,19 @@ namespace FileFind
             return matchingFolderItems;
         }
 
-        private static void IncludeEnvironmentPaths(
-            IEnumerable<string> alreadyIncludedPathExpressions, FileSet fileSet)
-        {
-            var pathList = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
-            foreach (string envPath in pathList)
-            {
-                foreach (string includePathExpression in alreadyIncludedPathExpressions)
-                {
-                    if (!Path.IsPathRooted(includePathExpression))
-                        fileSet.Include(Path.Combine(envPath, includePathExpression));
-                }
-            }
-        }
-
         private static IEnumerable<string> GetMatchingFileNames(FileSet fileSet)
         {
             Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFilesAsync();
-            WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
+            ExceptionHelper.WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
             return matchingFilesTask.Result;
         }
 
         private static IEnumerable<string> GetMatchingFolderNames(FileSet fileSet)
         {
             Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFoldersAsync();
-            WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
+            ExceptionHelper.WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
 
             return matchingFilesTask.Result;
-        }
-
-        private static void WaitForTaskAndTranslateAggregateExceptions(Task taskToWaitFor)
-        {
-            try
-            {
-                taskToWaitFor.Wait();
-            }
-            catch (AggregateException agg)
-            {
-                if (agg.InnerExceptions.Count == 1)
-                    throw agg.InnerExceptions[0];
-
-                throw;
-            }
         }
 
         private static void HandleException(Exception exc, bool unrecognizedError, bool showDiagnostic)
@@ -271,7 +289,7 @@ namespace FileFind
                 Console.WriteLine(exc.ToString());
             else
                 Console.WriteLine(unrecognizedError
-                    ? string.Format("Unexpected Error: \"{0}\"", exc.Message)
+                    ? $"Unexpected Error: \"{exc.Message}\""
                     : exc.Message);
         }
 
