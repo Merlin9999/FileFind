@@ -20,7 +20,7 @@ namespace FileFind
         public string OutFolder { get; set; }
     }
 
-    [Verb("zipfiles", HelpText = "Zip files")]
+    [Verb("zipfiles", HelpText = "Add files to zip. Create zip if it doesn't exist")]
     public class ZipFilesOptions : CopyFilesAndZipFilesOptions
     {
         [Option('z', "zipfilename", Required = true, HelpText = "Name of the output zip file")]

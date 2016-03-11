@@ -15,12 +15,12 @@ namespace FileFind
     public static class FileSetExtensions
     {
         /// <summary>
-        /// Zips the files in the <see cref="IFileSet"/>.
+        /// Zips the files in the <see cref="FileSet"/>.
         /// </summary>
         /// <param name="fileSet">The file set.</param>
         /// <param name="zipFileName">Name of the zip file to create.</param>
         /// <exception cref="System.ArgumentException">Unexpected path format.</exception>
-        public static void ZipFiles(this IFileSet fileSet, string zipFileName)
+        public static void ZipFiles(this FileSet fileSet, string zipFileName)
         {
             fileSet.ZipFiles(null, zipFileName);
         }
@@ -32,7 +32,7 @@ namespace FileFind
         /// <param name="outputBasePath">Path to prepend to all files in the <see cref="fileSet"/> in the zip file</param>
         /// <param name="zipFileName">Name of the zip file to create.</param>
         /// <exception cref="System.ArgumentException">Unexpected path format.</exception>
-        public static void ZipFiles(this IFileSet fileSet, string outputBasePath, string zipFileName)
+        public static void ZipFiles(this FileSet fileSet, string outputBasePath, string zipFileName)
         {
             ZipFiles(
                 new[] {new FileSetAndBasePath() {OutputBasePath = outputBasePath, FileSet = fileSet}},
@@ -71,12 +71,29 @@ namespace FileFind
                     {
                         filesTask.Wait();
 
-                        foreach (string fileName in filesTask.Result)
+                        foreach (string fileToZip in filesTask.Result)
                         {
-                            string fileNameWithBasePath = string.IsNullOrEmpty(fileSetEntry.OutputBasePath)
-                                ? fileName
-                                : Path.Combine(fileSetEntry.OutputBasePath, fileName);
-                            zip.AddFile(fileNameWithBasePath, Path.GetDirectoryName(fileName));
+                            string fileToZipWithBasePath;
+                            if (string.IsNullOrEmpty(fileSetEntry.FileSet.BasePath))
+                                fileToZipWithBasePath = fileToZip;
+                            else
+                                fileToZipWithBasePath = Path.Combine(fileSetEntry.FileSet.BasePath, fileToZip);
+
+                            string outputFileDirectory = Path.GetDirectoryName(fileToZip);
+                            if (string.IsNullOrEmpty(outputFileDirectory))
+                            {
+                                if (string.IsNullOrEmpty(fileSetEntry.OutputBasePath))
+                                    zip.AddFile(fileToZipWithBasePath);
+                                else
+                                    zip.AddFile(fileToZipWithBasePath, fileSetEntry.OutputBasePath);
+                            }
+                            else
+                            {
+                                if (string.IsNullOrEmpty(fileSetEntry.OutputBasePath))
+                                    zip.AddFile(fileToZipWithBasePath, outputFileDirectory);
+                                else
+                                    zip.AddFile(fileToZipWithBasePath, Path.Combine(fileSetEntry.OutputBasePath, outputFileDirectory));
+                            }
                         }
                     });
                 }
@@ -91,7 +108,7 @@ namespace FileFind
         /// <param name="fileSet">The file sets.</param>
         /// <param name="outputFolder">Path to copy the files to.</param>
         /// <exception cref="System.ArgumentException">Unexpected path format.</exception>
-        public static void CopyFiles(this IFileSet fileSet, string outputFolder)
+        public static void CopyFiles(this FileSet fileSet, string outputFolder)
         {
             CopyFiles(
                 new[] { new FileSetAndBasePath() { OutputBasePath = null, FileSet = fileSet } },
@@ -112,7 +129,7 @@ namespace FileFind
         }
 
         /// <summary>
-        /// Copies the files in the <see cref="IEnumerable{IFileSet}"/>.
+        /// Copies the files in the <see cref="IEnumerable{FileSet}"/>.
         /// </summary>
         /// <param name="fileSetsWithBasePaths">The file sets each paired with a base path.</param>
         /// <param name="outputFolder">Base path to copy the files to.</param>
@@ -124,16 +141,23 @@ namespace FileFind
             {
                 Parallel.ForEach(fileSetsWithBasePaths, async fileSetEntry =>
                 {
-                    foreach (string fileName in await fileSetEntry.FileSet.GetFilesAsync())
+                    foreach (string fileToCopy in await fileSetEntry.FileSet.GetFilesAsync())
                     {
-                        string fileNameWithBasePath = string.IsNullOrEmpty(fileSetEntry.OutputBasePath)
-                            ? fileName
-                            : Path.Combine(fileSetEntry.OutputBasePath, fileName);
-                        string outputFileName = Path.Combine(outputFolder, fileName);
+                        string fileToCopyWithBasePath;
+                        if (string.IsNullOrEmpty(fileSetEntry.FileSet.BasePath))
+                            fileToCopyWithBasePath = fileToCopy;
+                        else
+                            fileToCopyWithBasePath = Path.Combine(fileSetEntry.FileSet.BasePath, fileToCopy);
+
+                        string outputFileName = string.IsNullOrEmpty(fileSetEntry.OutputBasePath)
+                            ? Path.Combine(outputFolder, fileToCopy)
+                            : Path.Combine(outputFolder, fileSetEntry.OutputBasePath, fileToCopy);
+
                         string outputFilePath = Path.GetDirectoryName(outputFileName);
                         if (!string.IsNullOrEmpty(outputFilePath))
                             Directory.CreateDirectory(outputFilePath);
-                        File.Copy(fileNameWithBasePath, outputFileName);
+
+                        File.Copy(fileToCopyWithBasePath, outputFileName);
                     }
                 });
             });
@@ -141,7 +165,7 @@ namespace FileFind
 
         public class FileSetAndBasePath
         {
-            public IFileSet FileSet { get; set; }
+            public FileSet FileSet { get; set; }
 
             /// <summary>
             /// Gets or sets the path to prepend to all files in the <see cref="FileSet"/>
