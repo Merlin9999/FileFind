@@ -185,8 +185,12 @@ namespace FileFind
 
                 matchingFolderItems = AlterFilePathsToFullyQualified(baseFolderAndFileSet.BaseFolder, matchingFolderItems);
 
+                var alreadyListed = new HashSet<string>();
                 foreach (string fileName in matchingFolderItems)
-                    Console.WriteLine(fileName);
+                {
+                    if (alreadyListed.Add(fileName))
+                        Console.WriteLine(fileName);
+                }
             }
         }
 
