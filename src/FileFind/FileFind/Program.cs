@@ -181,7 +181,7 @@ namespace FileFind
 
             foreach (BaseFolderAndFileSet baseFolderAndFileSet in baseFolderAndFileSetList)
             {
-                IEnumerable<string> matchingFolderItems = GetMatchingFolderNames(baseFolderAndFileSet.FileSet);
+                IEnumerable<string> matchingFolderItems = GetMatchingFileNames(baseFolderAndFileSet.FileSet);
 
                 matchingFolderItems = AlterFilePathsToFullyQualified(baseFolderAndFileSet.BaseFolder, matchingFolderItems);
 
