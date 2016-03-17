@@ -173,13 +173,18 @@ namespace FileFind
             var pathList = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
             foreach (string envPath in pathList)
             {
-                baseFolderAndFileSetList.Add(new BaseFolderAndFileSet()
+                string envPathUpdated = Environment.ExpandEnvironmentVariables(envPath);
+
+                if (Directory.Exists(envPathUpdated))
                 {
-                    BaseFolder = envPath,
-                    FileSet =
-                        CreateFileSet(envPath, options.IncludePathExpressions, options.ExcludePathExpressions,
-                            !options.AbortOnAccessErrors),
-                });
+                    baseFolderAndFileSetList.Add(new BaseFolderAndFileSet()
+                    {
+                        BaseFolder = envPathUpdated,
+                        FileSet =
+                            CreateFileSet(envPathUpdated, options.IncludePathExpressions, options.ExcludePathExpressions,
+                                !options.AbortOnAccessErrors),
+                    });
+                }
             }
 
             foreach (BaseFolderAndFileSet baseFolderAndFileSet in baseFolderAndFileSetList)
