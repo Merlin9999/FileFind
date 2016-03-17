@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CommandLine;
 using PCLFileSet;
@@ -149,6 +150,7 @@ namespace FileFind
                 !options.AbortOnAccessErrors);
 
             fileSet.CopyFiles(options.OutFolder);
+            Console.WriteLine("Done copying files.");
         }
 
         private static void ZipFiles(ZipFilesOptions options)
@@ -160,6 +162,7 @@ namespace FileFind
                 !options.AbortOnAccessErrors);
 
             fileSet.ZipFiles(options.ZipBaseFolder, options.ZipFileName);
+            Console.WriteLine("Done zipping files.");
         }
 
         private static void SearchEnvironmentPath(SearchPathOptions options)
@@ -200,19 +203,6 @@ namespace FileFind
             public FileSet FileSet { get; set; }
         }
 
-        private static void IncludeEnvironmentPaths(
-            IEnumerable<string> alreadyIncludedPathExpressions, FileSet fileSet)
-        {
-            var pathList = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator);
-            foreach (string envPath in pathList)
-            {
-                foreach (string includePathExpression in alreadyIncludedPathExpressions)
-                {
-                    if (!Path.IsPathRooted(includePathExpression))
-                        fileSet.Include(Path.Combine(envPath, includePathExpression));
-                }
-            }
-        }
 
         private static void ValidateOptionsForConsistency(CommonOptions options)
         {
@@ -283,7 +273,6 @@ namespace FileFind
         {
             Task<IEnumerable<string>> matchingFilesTask = fileSet.GetFoldersAsync();
             ExceptionHelper.WaitForTaskAndTranslateAggregateExceptions(matchingFilesTask);
-
             return matchingFilesTask.Result;
         }
 
