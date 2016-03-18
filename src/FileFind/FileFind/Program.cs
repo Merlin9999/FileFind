@@ -175,7 +175,7 @@ namespace FileFind
             {
                 string envPathUpdated = Environment.ExpandEnvironmentVariables(envPath);
 
-                if (Directory.Exists(envPathUpdated))
+                if (options.AbortOnAccessErrors || Directory.Exists(envPathUpdated))
                 {
                     baseFolderAndFileSetList.Add(new BaseFolderAndFileSet()
                     {
