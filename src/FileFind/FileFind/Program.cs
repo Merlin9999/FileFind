@@ -187,13 +187,13 @@ namespace FileFind
                 }
             }
 
+            var alreadyListed = new HashSet<string>();
             foreach (BaseFolderAndFileSet baseFolderAndFileSet in baseFolderAndFileSetList)
             {
                 IEnumerable<string> matchingFolderItems = GetMatchingFileNames(baseFolderAndFileSet.FileSet);
 
                 matchingFolderItems = AlterFilePathsToFullyQualified(baseFolderAndFileSet.BaseFolder, matchingFolderItems);
 
-                var alreadyListed = new HashSet<string>();
                 foreach (string fileName in matchingFolderItems)
                 {
                     if (alreadyListed.Add(fileName))
@@ -213,18 +213,6 @@ namespace FileFind
         {
             if (!options.IncludePathExpressions.Any())
                 throw new FileFindException("At least one include path is required.");
-
-            //if (options.UseEnvironmentPath)
-            //{
-            //    if (!string.IsNullOrWhiteSpace(options.BaseFolder))
-            //        throw new FileFindException("The arguments \"/OutputBasePath+\" and \"/Path+\" are incompatible.");
-
-            //    if (options.ZipFileName != null)
-            //        throw new FileFindException(
-            //            "The arguments \"/ZipFileName=<ZipFile>\" and \"/Path+\" are incompatible.");
-
-            //    // is the copy file copy parameter compatible with UseEnvironmentPath?
-            //}
         }
 
         private static FileSet CreateFileSet(string baseFolder, 
