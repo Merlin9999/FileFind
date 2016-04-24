@@ -219,7 +219,7 @@ namespace FileFind
             IEnumerable<string> includedPathExpressions, IEnumerable<string> excludedPathExpressions,
             bool filterFileSystemAccessExceptions)
         {
-            var fileSet = new FileSet(new DesktopFileSystem(), baseFolder ?? @".\");
+            var fileSet = new FileSet(baseFolder ?? @".\");
 
             foreach (string includePathExpression in includedPathExpressions)
                 fileSet.Include(includePathExpression);
