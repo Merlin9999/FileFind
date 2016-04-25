@@ -1,7 +1,7 @@
 # FileFind
 FileFind is a console utility written in c# that is both useful and a working example of using the PCLFileSet and PCLFileSet.Desktop libraries. These libraries are available [here](http://github.com/Merlin9999/PCLFileSet).
-```
 ## Available command line verbs:
+```
   listfiles      List Files
   listfolders    List Folders
   copyfiles      Copy files to output folder
