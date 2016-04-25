@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CommandLine;
 using PCLFileSet;
+using PCLFileSet.Desktop;
 using PCLStorage;
 
 namespace FileFind
