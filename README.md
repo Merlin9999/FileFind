@@ -26,7 +26,7 @@ FileFind is a console utility written in c# that is both useful and a working ex
 ## Example
 `C:> filefind listfiles -b .\\..\\.. -i bin\\Debug\\*.exe bin\\Debug\\*.dll bin\\Debug\\*.config -e **\\*.vshost.*`
 
-This example sets upa base folder, then add 3 include paths and 1 exclude path. The output of this command is:
+This example sets a base folder, then adds 3 include paths and 1 exclude path. The output of this command is:
 ```
 bin\Debug\CommandLine.dll
 bin\Debug\FileFind.exe
