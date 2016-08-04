@@ -24,7 +24,7 @@ FileFind is a console utility written in c# that is both useful and a working ex
   --version             Display version information.
 ```
 ## Example
-`C:> filefind listfiles -b .\\..\\.. -i bin\\Debug\\*.exe bin\\Debug\\*.dll bin\\Debug\\*.config -e **\\*.vshost.*`
+`C:> filefind listfiles -b .\..\.. -i bin\Debug\*.exe bin\Debug\*.dll bin\Debug\*.config -e **\*.vshost.*`
 
 This example sets a base folder, then adds 3 include paths and 1 exclude path. The output of this command is:
 ```
