@@ -1,5 +1,5 @@
 source https://nuget.org/api/v2
 
-nuget FAKE
+nuget FAKE < 5.0.0
 nuget NUnit.Console
 http http://dist.nuget.org/win-x86-commandline/latest/nuget.exe NuGet.exe
