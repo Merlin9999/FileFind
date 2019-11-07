@@ -19,11 +19,11 @@ namespace FileFind
         static int Main(string[] args)
         {
             ParserResult<object> optionsResult = Parser.Default
-                .ParseArguments<ListFilesOptions, ListFoldersOptions, CopyFilesOptions, ZipFilesOptions, SearchPathOptions>(args);
+                .ParseArguments<ListFilesOptions, ListFoldersOptions, CopyFilesOptions, ZipFilesOptions, SearchPathOptions, EncodeFileOptions, DecodeFileOptions>(args);
 
-            var parsedOptions = optionsResult as Parsed<object>;
-            CommonOptions commonOptions = parsedOptions != null
-                ? (CommonOptions)parsedOptions.Value
+            Parsed<object> parsedOptions = optionsResult as Parsed<object>;
+            ICommonOptions commonOptions = parsedOptions != null
+                ? (ICommonOptions)parsedOptions.Value
                 : new ListFilesOptions();
 
             int exitCode;
@@ -55,6 +55,16 @@ namespace FileFind
                         (SearchPathOptions options) =>
                         {
                             SearchEnvironmentPath(options);
+                            return 0;
+                        },
+                        (EncodeFileOptions options) =>
+                        {
+                            EncodeFile(options);
+                            return 0;
+                        },
+                        (DecodeFileOptions options) =>
+                        {
+                            DecodeFile(options);
                             return 0;
                         },
                         errors =>
@@ -203,6 +213,34 @@ namespace FileFind
             }
         }
 
+        private static void EncodeFile(EncodeFileOptions options)
+        {
+            if (string.IsNullOrEmpty(options.DestinationFileName))
+                options.DestinationFileName = $"{options.SourceFileName}.encoded";
+
+            using FileStream sourceStream = File.OpenRead(options.SourceFileName);
+            byte[] fileBytes = sourceStream.ReadFully();
+            string base64 = Convert.ToBase64String(fileBytes);
+
+            using StreamWriter destWriter = File.CreateText(options.DestinationFileName);
+            destWriter.Write(base64);
+            destWriter.Flush();
+        }
+
+        private static void DecodeFile(DecodeFileOptions options)
+        {
+            if (string.IsNullOrEmpty(options.DestinationFileName))
+                options.DestinationFileName = $"{options.SourceFileName}.decoded";
+
+            using StreamReader sourceReader = File.OpenText(options.SourceFileName);
+            string base64 = sourceReader.ReadToEnd();
+            byte[] fileBytes = Convert.FromBase64String(base64);
+
+            using FileStream destStream = File.Create(options.DestinationFileName);
+            destStream.Write(fileBytes, 0, fileBytes.Length);
+            destStream.Flush();
+        }
+
         private class BaseFolderAndFileSet
         {
             public string BaseFolder { get; set; }
@@ -210,7 +248,7 @@ namespace FileFind
         }
 
 
-        private static void ValidateOptionsForConsistency(CommonOptions options)
+        private static void ValidateOptionsForConsistency(CommonGlobOptions options)
         {
             if (!options.IncludePathExpressions.Any())
                 throw new FileFindException("At least one include path is required.");
@@ -280,7 +318,7 @@ namespace FileFind
                     : exc.Message);
         }
 
-        private static void ConditionallyWaitBeforeClosing(CommonOptions args)
+        private static void ConditionallyWaitBeforeClosing(ICommonOptions args)
         {
             if (args.WaitBeforeClosing)
             {
